@@ -49,34 +49,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  // login handler
-  const login = async (creds: { email: string; password: string }) => {
-    const res = await fetch(API_ROUTES.LOGIN, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(creds),
-      credentials: "include",
-    });
-    if (!res.ok) return { ok: false, error: await extractApiError(res) };
-    const { token: newToken } = await res.json();
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
-    return { ok: true };
-  };
+// login handler
+const login: AuthContextType["login"] = async (creds) => {
+  const res = await fetch(API_ROUTES.LOGIN, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(creds),
+    credentials: "include",
+  });
 
-  // signup handler
-  const signup = async (data: { name: string; email: string; password: string }) => {
-    const res = await fetch(API_ROUTES.SIGNUP, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) return { ok: false, error: await extractApiError(res) };
-    const { token: newToken } = await res.json();
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
-    return { ok: true };
-  };
+  if (!res.ok) {
+    return { ok: false as const, error: await extractApiError(res) };
+  }
+
+  const { token: newToken } = await res.json();
+  localStorage.setItem("token", newToken);
+  setToken(newToken);
+
+  return { ok: true as const };
+};
+
+// signup handler
+const signup: AuthContextType["signup"] = async (data) => {
+  const res = await fetch(API_ROUTES.SIGNUP, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    return { ok: false as const, error: await extractApiError(res) };
+  }
+
+  const { token: newToken } = await res.json();
+  localStorage.setItem("token", newToken);
+  setToken(newToken);
+
+  return { ok: true as const };
+};
 
   // logout handler
   const logout = () => {

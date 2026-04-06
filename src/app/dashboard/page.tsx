@@ -142,7 +142,7 @@ export default function DashboardPage() {
             <p className="text-gray-400 mb-6">Create your first project to start auditing</p>
             <button
               onClick={() => setModalOpen(true)}
-              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:scale-105 transition-all cursor-pointer"
+              className="px-6  py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:scale-105 transition-all cursor-pointer"
             >
               Create Project
             </button>
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                 <button
                   onClick={createProject}
                   disabled={loading}
-                  className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50"
+                  className="px-6 py-2 cursor-pointer rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50"
                 >
                   {loading ? (
                     <div className="flex items-center gap-2">
