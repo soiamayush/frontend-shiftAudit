@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+
+body {
+  background: linear-gradient(to right, #000000, #063372);
+  min-height: 100vh;
+  color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a365d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #60a5fa;
+}
+
+/* Animated border (like “moving ring” on CTA buttons) */
+@keyframes sa-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sa-animated-ring {
+  position: relative;
+  border-radius: 1rem; /* keep in sync with card radius */
+}
+
+.sa-animated-ring::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 180deg,
+    rgba(168, 85, 247, 0),
+    rgba(168, 85, 247, 0.9),
+    rgba(34, 211, 238, 0.9),
+    rgba(236, 72, 153, 0.85),
+    rgba(168, 85, 247, 0)
+  );
+  animation: sa-spin 2.4s linear infinite;
+  opacity: 0;
+  transition: opacity 250ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sa-animated-ring::after {
+  content: "";
+  position: absolute;
+  inset: 1px; /* ring thickness */
+  border-radius: calc(1rem - 1px);
+  background: rgba(10, 10, 15, 0.55);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sa-animated-ring:hover::before {
+  opacity: 1;
+}
