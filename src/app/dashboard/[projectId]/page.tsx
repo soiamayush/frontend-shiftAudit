@@ -182,7 +182,7 @@ export default function ProjectAnalysisPage() {
               <CodeChangesPanel
                 changes={Object.entries(insight.codeChanges).flatMap(
                   ([metric, arr]) =>
-                    arr.map((c: any) => ({
+                    arr.map((c) => ({
                       ...c,
                       metric,
                     }))
