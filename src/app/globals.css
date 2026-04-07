@@ -1,31 +1,30 @@
 @import "tailwindcss";
 
-
 body {
-  background: linear-gradient(to right, #000000, #063372);
+  background: #0a0a0f; /* pure dark like your UI */
   min-height: 100vh;
   color: white;
 }
 
-/* Custom scrollbar */
+/* Scrollbar - cyan theme */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a365d;
+  background: #020617; /* dark slate */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3b82f6;
+  background: #06b6d4; /* cyan */
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #60a5fa;
+  background: #22d3ee; /* lighter cyan */
 }
 
-/* Animated border (like “moving ring” on CTA buttons) */
+/* Animated border (FIXED THEME) */
 @keyframes sa-spin {
   to {
     transform: rotate(360deg);
@@ -34,7 +33,7 @@ body {
 
 .sa-animated-ring {
   position: relative;
-  border-radius: 1rem; /* keep in sync with card radius */
+  border-radius: 1rem;
 }
 
 .sa-animated-ring::before {
@@ -42,14 +41,17 @@ body {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
+
+  /* ✅ FIXED COLORS (NO PURPLE/PINK) */
   background: conic-gradient(
     from 180deg,
-    rgba(168, 85, 247, 0),
-    rgba(168, 85, 247, 0.9),
-    rgba(34, 211, 238, 0.9),
-    rgba(236, 72, 153, 0.85),
-    rgba(168, 85, 247, 0)
+    rgba(6, 182, 212, 0),
+    rgba(6, 182, 212, 0.9),
+    rgba(59, 130, 246, 0.9),
+    rgba(99, 102, 241, 0.85),
+    rgba(6, 182, 212, 0)
   );
+
   animation: sa-spin 2.4s linear infinite;
   opacity: 0;
   transition: opacity 250ms ease;
@@ -60,7 +62,7 @@ body {
 .sa-animated-ring::after {
   content: "";
   position: absolute;
-  inset: 1px; /* ring thickness */
+  inset: 1px;
   border-radius: calc(1rem - 1px);
   background: rgba(10, 10, 15, 0.55);
   pointer-events: none;
