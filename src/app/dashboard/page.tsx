@@ -172,7 +172,7 @@ export default function DashboardPage() {
         {/* Modal */}
         {modalOpen && (
           <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
             onClick={() => setModalOpen(false)}
           >
             <div
