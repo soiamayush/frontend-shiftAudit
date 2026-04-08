@@ -5,12 +5,16 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/usAuth";
 import { API_ROUTES } from "@/config";
 import { AnalysisInsight } from "@/types/project.type";
-import { MetricInfo } from "@/components/MetricInfo";
 import { CodeChangesPanel } from "@/components/CodeChangesPanel";
+import {
+  displayMetricValue,
+  flattenCodeChanges,
+  humanizeRecommendedStep,
+  metricStatusTextClass,
+} from "@/lib/analysisDisplay";
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
-  ChartBarIcon,
   CodeBracketIcon,
 } from "@heroicons/react/24/outline";
 
@@ -76,12 +80,6 @@ export default function ProjectAnalysisPage() {
     }
     return () => clearInterval(pollingRef.current!);
   }, [status, fetchAnalysis]);
-
-  const getScoreColor = (value: number) => {
-    if (value >= 90) return "text-green-400";
-    if (value >= 70) return "text-yellow-400";
-    return "text-red-400";
-  };
 
   return (
     <div className="relative min-h-screen bg-[#0a0a0f] text-white">
@@ -162,14 +160,14 @@ export default function ProjectAnalysisPage() {
                   >
                     <div className="flex justify-between">
                       <span>{name}</span>
-                      <span className={getScoreColor(detail.value)}>
-                        {detail.value}%
+                      <span className={metricStatusTextClass(detail)}>
+                        {displayMetricValue(name, detail.value)}
                       </span>
                     </div>
 
                     <ul className="mt-3 text-sm text-gray-400 space-y-1">
                       {detail.recommendedSteps.slice(0, 2).map((s: string, i: number) => (
-                        <li key={i}>• {s}</li>
+                        <li key={i}>• {humanizeRecommendedStep(s)}</li>
                       ))}
                     </ul>
                   </div>
@@ -177,18 +175,11 @@ export default function ProjectAnalysisPage() {
               )}
             </div>
 
-            {/* Code changes */}
-            {insight.codeChanges && (
-              <CodeChangesPanel
-                changes={Object.entries(insight.codeChanges).flatMap(
-                  ([metric, arr]) =>
-                    arr.map((c) => ({
-                      ...c,
-                      metric,
-                    }))
-                )}
-              />
-            )}
+            {(() => {
+              const codeChangesList = flattenCodeChanges(insight.codeChanges);
+              if (codeChangesList.length === 0) return null;
+              return <CodeChangesPanel changes={codeChangesList} />;
+            })()}
           </div>
         ))}
       </div>

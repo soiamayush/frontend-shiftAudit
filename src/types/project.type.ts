@@ -23,12 +23,8 @@ export interface AnalysisInsight {
   route: string;
   /** Array of performance metrics for that route */
   performanceData: PerformanceMetrics[];
-  codeChanges: {
-    FCP: CodeChange[];
-    LCP: CodeChange[];
-    CLS: CodeChange[];
-    TBT: CodeChange[];
-  };
+  /** Per-metric suggested edits from the analyzer (keys may be a subset of FCP/LCP/CLS/TBT). */
+  codeChanges?: Partial<Record<keyof PerformanceMetrics, CodeChange[]>>;
 }
 
 /**
