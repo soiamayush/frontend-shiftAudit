@@ -11,9 +11,10 @@ import { FiPlus, FiX, FiFolderPlus } from "react-icons/fi";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { token, loading, setLoading } = useAuth();
+  const { token } = useAuth();
 
   const [projects, setProjects] = useState<ProjectResponse[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [website, setWebsite] = useState("");
@@ -45,12 +46,9 @@ export default function DashboardPage() {
   }, [token]);
 
   useEffect(() => {
-    if (loading) return;
-    if (!token) return router.push("/auth/login");
+    if (!token) return;
     fetchProjects();
-  }, [token, loading, router, fetchProjects]);
-
-  if (loading) return null;
+  }, [token, fetchProjects]);
 
   const createProject = async () => {
     if (!projectName.trim() || !website.trim()) {
@@ -58,7 +56,7 @@ export default function DashboardPage() {
       return;
     }
 
-    setLoading(true);
+    setIsCreating(true);
 
     const payload: any = {
       name: projectName.trim(),
@@ -87,7 +85,7 @@ export default function DashboardPage() {
       showToast("Failed to create project", "error");
     }
 
-    setLoading(false);
+    setIsCreating(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -213,10 +211,10 @@ export default function DashboardPage() {
 
               <button
                 onClick={createProject}
-                disabled={loading}
+                disabled={isCreating}
                 className="mt-5 w-full py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500"
               >
-                {loading ? "Creating..." : "Create Project"}
+                {isCreating ? "Creating..." : "Create Project"}
               </button>
             </div>
           </div>

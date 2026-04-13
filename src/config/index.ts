@@ -10,7 +10,9 @@ export const API_ROUTES = {
   // Auth
   SIGNUP: `${BASE}/auth/signup`,
   LOGIN: `${BASE}/auth/login`,
-  GOOGLE_AUTH:`${BASE}/api/auth/google`,
+  // Backend also exposes GET /auth/me; /api/auth/me matches common /api prefix & proxies
+  ME: `${BASE}/api/auth/me`,
+  GOOGLE_AUTH: `${BASE}/api/auth/google`,
 
   // Projects
   PROJECT_CREATE: `${BASE}/project/create`,

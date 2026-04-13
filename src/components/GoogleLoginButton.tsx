@@ -4,24 +4,29 @@
 import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { API_ROUTES } from "@/config";
+import { useAuth } from "@/hooks/usAuth";
 
 export default function GoogleLoginButton() {
   const router = useRouter();
+  const { setSessionToken } = useAuth();
 
-  const handleCredentialResponse = useCallback(async (response: typeof google.accounts.id.CredentialResponse) => {
-    const res = await fetch(API_ROUTES.GOOGLE_AUTH, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ credential: response.credential }),
-    });
-    const data = await res.json();
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      router.push("/dashboard");
-    } else {
-      console.error(data.error);
-    }
-  }, [router]);
+  const handleCredentialResponse = useCallback(
+    async (response: typeof google.accounts.id.CredentialResponse) => {
+      const res = await fetch(API_ROUTES.GOOGLE_AUTH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (data.token) {
+        setSessionToken(data.token);
+        router.push("/dashboard");
+      } else {
+        console.error(data.error);
+      }
+    },
+    [router, setSessionToken]
+  );
 
   useEffect(() => {
     /* global google */

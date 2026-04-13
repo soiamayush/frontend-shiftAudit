@@ -25,6 +25,14 @@ import {
 } from "@heroicons/react/24/outline";
 import type { AutoPullRequestResponse, AutoPrMetric } from "@/types/project.type";
 
+/** Browser-only storage for demo UX; PATs are sensitive—revoke if this machine is shared. */
+const GITHUB_TOKEN_STORAGE_KEY = "shiftaudit_github_pat_v1";
+const LINK_GITHUB_PAT_DOCS =
+  "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens";
+const LINK_GITHUB_CLASSIC_TOKENS = "https://github.com/settings/tokens";
+const LINK_GITHUB_FINE_GRAINED_NEW =
+  "https://github.com/settings/personal-access-tokens/new";
+
 function routeId(route: string) {
   return `route-${encodeURIComponent(route).replace(/%/g, "_")}`;
 }
@@ -66,6 +74,16 @@ export default function ProjectAnalysisPage() {
   const [autoPrResult, setAutoPrResult] =
     useState<AutoPullRequestResponse | null>(null);
   const [showDryRunHelp, setShowDryRunHelp] = useState(false);
+  const [autoPrGithubToken, setAutoPrGithubToken] = useState("");
+  const [autoPrRememberGithubToken, setAutoPrRememberGithubToken] =
+    useState(true);
+  const [showGithubPatHelp, setShowGithubPatHelp] = useState(false);
+
+  useEffect(() => {
+    if (!autoPrOpen || typeof window === "undefined") return;
+    const saved = localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY);
+    if (saved) setAutoPrGithubToken(saved);
+  }, [autoPrOpen]);
 
   const fetchAnalysis = useCallback(async () => {
     if (!token) return;
@@ -108,6 +126,12 @@ export default function ProjectAnalysisPage() {
     setAutoPrError("");
     setAutoPrResult(null);
     try {
+      if (!autoPrDryRun && autoPrRememberGithubToken && autoPrGithubToken.trim()) {
+        localStorage.setItem(
+          GITHUB_TOKEN_STORAGE_KEY,
+          autoPrGithubToken.trim()
+        );
+      }
       const res = await fetch(API_ROUTES.AUTO_PR, {
         method: "POST",
         headers: {
@@ -119,6 +143,9 @@ export default function ProjectAnalysisPage() {
           route: autoPrRoute.trim(),
           metric: autoPrMetric,
           dryRun: autoPrDryRun,
+          ...(autoPrDryRun
+            ? {}
+            : { githubToken: autoPrGithubToken.trim() || undefined }),
         }),
       });
       const data = await res.json();
@@ -226,9 +253,9 @@ export default function ProjectAnalysisPage() {
         )}
 
         {/* Layout: sidebar + content */}
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Sidebar */}
-          <aside className="hidden lg:block sticky top-20 z-20">
+          <aside className="hidden lg:block w-[260px] flex-shrink-0 sticky top-20 z-20 self-start" style={{ position: "sticky" }}>
             <div className="bg-[#0d1117]/80 border border-white/[0.06] rounded-2xl p-4 backdrop-blur-xl shadow-2xl shadow-black/40">
               <div className="flex items-center gap-2 mb-4 px-1">
                 <GlobeAltIcon className="w-4 h-4 text-cyan-400" />
@@ -282,7 +309,7 @@ export default function ProjectAnalysisPage() {
           </aside>
 
           {/* Main content */}
-          <div>
+          <div className="flex-1 min-w-0">
             {/* Loading */}
             {analysis.length === 0 && status === "pending" && (
               <div className="text-center py-24">
@@ -392,20 +419,20 @@ export default function ProjectAnalysisPage() {
       {/* Auto PR Modal */}
       {autoPrOpen && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in"
+          className="fixed inset-0 z-50 flex min-h-full items-center justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-6 animate-fade-in"
           onClick={() => setAutoPrOpen(false)}
         >
           <div
-            className="bg-[#0d1117] p-6 rounded-2xl w-full max-w-2xl border border-white/[0.08] shadow-2xl shadow-black/60 animate-modal-in"
+            className="bg-[#0d1117] rounded-2xl w-full max-w-5xl border border-white/[0.08] shadow-2xl shadow-black/60 animate-modal-in flex flex-col max-h-[min(92vh,56rem)] my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal header */}
-            <div className="flex justify-between items-start mb-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
+            {/* Modal header — stays fixed while body scrolls */}
+            <div className="flex justify-between items-start gap-4 p-6 pb-4 flex-shrink-0 border-b border-white/[0.06]">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 flex-shrink-0">
                   <BoltIcon className="w-5 h-5 text-cyan-400" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-white">
                     Auto Pull Request
                   </h2>
@@ -416,13 +443,13 @@ export default function ProjectAnalysisPage() {
               </div>
               <button
                 onClick={() => setAutoPrOpen(false)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] hover:border-white/[0.12] cursor-pointer transition-all duration-200 group"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] hover:border-white/[0.12] cursor-pointer transition-all duration-200 group flex-shrink-0"
               >
                 <XMarkIcon className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 p-6 pt-5 flex-1 min-h-0 overflow-y-auto overscroll-contain sidebar-scroll">
               {/* Dry run help */}
               {showDryRunHelp && (
                 <div className="flex items-start gap-3 text-sm bg-cyan-500/5 border border-cyan-500/15 rounded-xl p-4 animate-fade-in">
@@ -439,11 +466,12 @@ export default function ProjectAnalysisPage() {
                     <p className="text-gray-400 text-xs leading-relaxed mt-1">
                       <strong className="text-gray-300">OFF</strong>: Creates a
                       real branch, commits the fix, and opens a Pull Request on
-                      GitHub. Requires{" "}
+                      GitHub. Paste a personal access token in the field below,
+                      or set{" "}
                       <code className="text-cyan-300 bg-cyan-500/10 px-1 rounded">
                         GITHUB_TOKEN
                       </code>{" "}
-                      on the backend.
+                      on the server.
                     </p>
                     <button
                       className="mt-2.5 text-xs px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition text-gray-300"
@@ -517,6 +545,153 @@ export default function ProjectAnalysisPage() {
                 </div>
               </div>
 
+              {/* GitHub PAT (required when not dry run) */}
+              <div
+                className={`rounded-xl border p-4 space-y-3 transition-colors ${
+                  autoPrDryRun
+                    ? "border-white/[0.06] bg-white/[0.02]"
+                    : "border-amber-500/25 bg-amber-500/[0.06]"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-300 mb-1 uppercase tracking-wider">
+                      GitHub personal access token
+                      {!autoPrDryRun && (
+                        <span className="text-amber-400/90 normal-case font-normal">
+                          {" "}
+                          · needed unless the API has{" "}
+                          <code className="text-[10px] bg-black/30 px-1 rounded">
+                            GITHUB_TOKEN
+                          </code>
+                        </span>
+                      )}
+                    </label>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      {autoPrDryRun
+                        ? "Not needed for preview. Turn off Dry run to create a real PR on your repo."
+                        : "Use a classic personal access token from an account that can push to this repo (see Help). Or set GITHUB_TOKEN on the API server."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGithubPatHelp((v) => !v)}
+                    className="shrink-0 text-[11px] px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-cyan-300/90"
+                  >
+                    {showGithubPatHelp ? "Hide" : "How to get a token"}
+                  </button>
+                </div>
+
+                {showGithubPatHelp && (
+                  <div className="text-[11px] text-gray-400 space-y-2 border-t border-white/10 pt-3">
+                    <p className="leading-relaxed text-gray-300">
+                      <strong className="text-white">Which account?</strong> The
+                      token must belong to a GitHub user who is allowed to create
+                      branches and open pull requests on the repository in your
+                      project&apos;s{" "}
+                      <code className="text-cyan-200/90 bg-white/5 px-1 rounded">
+                        gitUrl
+                      </code>{" "}
+                      (e.g.{" "}
+                      <code className="text-cyan-200/90 bg-white/5 px-1 rounded">
+                        github.com/you/your-repo
+                      </code>
+                      ). Usually that&apos;s <strong>your own account</strong> if
+                      you own the repo, or a teammate/org bot with{" "}
+                      <strong>write</strong> access—not a random user.
+                    </p>
+                    <p className="leading-relaxed">
+                      ShiftAudit Auto PR is tested with a{" "}
+                      <strong className="text-gray-300">classic</strong> personal
+                      access token (not fine-grained). GitHub&apos;s API uses the
+                      token as &quot;who&quot; is pushing the branch and opening
+                      the PR.
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1.5">
+                      <li>
+                        <span className="text-gray-300">Recommended — classic PAT:</span>{" "}
+                        <a
+                          href={LINK_GITHUB_CLASSIC_TOKENS}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400 hover:underline underline-offset-2"
+                        >
+                          github.com/settings/tokens
+                        </a>{" "}
+                        → <strong className="text-gray-300">Generate new token (classic)</strong>{" "}
+                        → enable the{" "}
+                        <code className="text-gray-300 bg-white/5 px-1 rounded text-[10px]">
+                          repo
+                        </code>{" "}
+                        scope (private repos) or{" "}
+                        <code className="text-gray-300 bg-white/5 px-1 rounded text-[10px]">
+                          public_repo
+                        </code>{" "}
+                        for public-only.
+                      </li>
+                      <li>
+                        <span className="text-gray-300">Docs:</span>{" "}
+                        <a
+                          href={LINK_GITHUB_PAT_DOCS}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400 hover:underline underline-offset-2"
+                        >
+                          Managing personal access tokens
+                        </a>
+                      </li>
+                      <li>
+                        <span className="text-gray-300">Optional — fine-grained:</span>{" "}
+                        <a
+                          href={LINK_GITHUB_FINE_GRAINED_NEW}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400 hover:underline underline-offset-2"
+                        >
+                          Create a fine-grained token
+                        </a>{" "}
+                        with <strong className="text-gray-300">Contents</strong> and{" "}
+                        <strong className="text-gray-300">Pull requests</strong>{" "}
+                        (read/write) on that repo. May work, but classic is what we
+                        recommend here.
+                      </li>
+                    </ul>
+                    <p className="text-amber-200/80 leading-relaxed">
+                      Treat tokens like passwords. Revoke them in GitHub settings
+                      if exposed. This demo can store the token in your browser
+                      only if you enable &quot;Remember&quot; below—avoid on
+                      shared computers.
+                    </p>
+                  </div>
+                )}
+
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={autoPrGithubToken}
+                  onChange={(e) => setAutoPrGithubToken(e.target.value)}
+                  disabled={autoPrDryRun}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#0a0e18] border border-white/[0.08] focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 text-sm text-white placeholder-gray-600 font-mono disabled:opacity-40 disabled:cursor-not-allowed"
+                  placeholder={
+                    autoPrDryRun
+                      ? "Enable when Dry run is off"
+                      : "ghp_… or fine-grained token"
+                  }
+                />
+                <label className="flex items-center gap-2 text-[11px] text-gray-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={autoPrRememberGithubToken}
+                    onChange={(e) =>
+                      setAutoPrRememberGithubToken(e.target.checked)
+                    }
+                    disabled={autoPrDryRun}
+                    className="accent-cyan-500 cursor-pointer disabled:opacity-40"
+                  />
+                  Remember token in this browser (localStorage only)
+                </label>
+              </div>
+
               {/* Generate button */}
               <button
                 onClick={runAutoPr}
@@ -586,7 +761,7 @@ export default function ProjectAnalysisPage() {
                         Diff
                       </span>
                     </div>
-                    <pre className="p-4 text-xs overflow-auto max-h-[320px] whitespace-pre-wrap text-gray-300 leading-relaxed font-mono">
+                    <pre className="p-4 text-xs sm:text-sm overflow-x-auto whitespace-pre-wrap break-words text-gray-300 leading-relaxed font-mono">
                       {autoPrResult.diff || "(no diff returned)"}
                     </pre>
                   </div>
