@@ -73,3 +73,15 @@ export interface ProjectResponse {
 export type RerunResponse = {
   message: string;
 };
+
+export type AutoPrMetric = "LCP" | "FCP" | "CLS" | "TBT";
+
+export type AutoPullRequestResponse = {
+  ok: boolean;
+  dryRun: boolean;
+  title: string;
+  branch: string;
+  prUrl?: string | null;
+  diff: string;
+  changedFiles: string[];
+};

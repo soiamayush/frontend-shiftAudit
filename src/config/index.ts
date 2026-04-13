@@ -24,4 +24,5 @@ export const API_ROUTES = {
   // Analysis
   ANALYZE: `${BASE}/api/analysis/analyze`,
   RERUN: (projectId: string) => `${BASE}/project/rerun?projectId=${projectId}`,
+  AUTO_PR: `${BASE}/project/auto-pr`,
 };
