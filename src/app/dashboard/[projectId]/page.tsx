@@ -23,9 +23,11 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import type { AutoPullRequestResponse, AutoPrMetric } from "@/types/project.type";
+import type {
+  AutoPullRequestResponse,
+  AutoPrMetric,
+} from "@/types/project.type";
 
-/** Browser-only storage for demo UX; PATs are sensitive—revoke if this machine is shared. */
 const GITHUB_TOKEN_STORAGE_KEY = "shiftaudit_github_pat_v1";
 const LINK_GITHUB_PAT_DOCS =
   "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens";
@@ -46,13 +48,6 @@ function routeLabel(route: string) {
   }
 }
 
-const METRIC_ICONS: Record<string, string> = {
-  FCP: "paint",
-  LCP: "image",
-  CLS: "layout",
-  TBT: "cpu",
-};
-
 export default function ProjectAnalysisPage() {
   const router = useRouter();
   const { projectId } = useParams<{ projectId: string }>();
@@ -63,7 +58,7 @@ export default function ProjectAnalysisPage() {
   const [rerunning, setRerunning] = useState(false);
   const [rerunStatus, setRerunStatus] = useState("");
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const [activeRoute, setActiveRoute] = useState("");
+  const [selectedRoute, setSelectedRoute] = useState("");
 
   const [autoPrOpen, setAutoPrOpen] = useState(false);
   const [autoPrRoute, setAutoPrRoute] = useState("");
@@ -103,6 +98,21 @@ export default function ProjectAnalysisPage() {
     [analysis]
   );
 
+  // Default to the first route; keep selection valid when analysis changes.
+  useEffect(() => {
+    if (!routes.length) {
+      setSelectedRoute("");
+      return;
+    }
+    setSelectedRoute((prev) => (prev && routes.includes(prev) ? prev : routes[0]));
+  }, [routes]);
+
+  const selectedInsight = useMemo(() => {
+    if (!analysis.length) return null;
+    if (!selectedRoute) return analysis[0] ?? null;
+    return analysis.find((a) => a.route === selectedRoute) ?? analysis[0] ?? null;
+  }, [analysis, selectedRoute]);
+
   async function handleRerun() {
     if (!token) return;
     setRerunning(true);
@@ -126,7 +136,11 @@ export default function ProjectAnalysisPage() {
     setAutoPrError("");
     setAutoPrResult(null);
     try {
-      if (!autoPrDryRun && autoPrRememberGithubToken && autoPrGithubToken.trim()) {
+      if (
+        !autoPrDryRun &&
+        autoPrRememberGithubToken &&
+        autoPrGithubToken.trim()
+      ) {
         localStorage.setItem(
           GITHUB_TOKEN_STORAGE_KEY,
           autoPrGithubToken.trim()
@@ -170,36 +184,6 @@ export default function ProjectAnalysisPage() {
     return () => clearInterval(pollingRef.current!);
   }, [status, fetchAnalysis]);
 
-  useEffect(() => {
-    if (!routes.length) return;
-    const els = routes
-      .map((r) => document.getElementById(routeId(r)))
-      .filter(Boolean) as HTMLElement[];
-    if (!els.length) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort(
-            (a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0)
-          );
-        if (visible.length) {
-          const id = visible[0].target.getAttribute("data-route") || "";
-          if (id) setActiveRoute(id);
-        }
-      },
-      { root: null, rootMargin: "-20% 0px -70% 0px", threshold: [0.1, 0.25, 0.5] }
-    );
-    for (const el of els) obs.observe(el);
-    return () => obs.disconnect();
-  }, [routes]);
-
-  function scrollToRoute(r: string) {
-    const el = document.getElementById(routeId(r));
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
   return (
     <div className="relative min-h-screen bg-[#060611] text-white overflow-x-hidden">
       {/* Animated background mesh */}
@@ -210,9 +194,11 @@ export default function ProjectAnalysisPage() {
         <div className="absolute top-[10%] left-[50%] w-[300px] h-[300px] bg-purple-500/8 blur-[80px] animate-float-reverse" />
       </div>
 
-      <div className="relative z-10 p-4 md:p-8 mt-10">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8 border-b border-white/[0.06] pb-5">
+      {/* ─── Page wrapper ─────────────────────────────────────────────────── */}
+      <div className="relative z-10 flex flex-col min-h-screen p-4 md:p-8">
+
+        {/* ─── Header ───────────────────────────────────────────────────────── */}
+        <div className="flex justify-between items-center mb-6 border-b border-white/[0.06] pb-5 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
@@ -246,18 +232,24 @@ export default function ProjectAnalysisPage() {
 
         {/* Rerun status toast */}
         {rerunStatus && (
-          <div className="mb-6 flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 animate-fade-in">
+          <div className="mb-4 flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 animate-fade-in flex-shrink-0">
             <BoltIcon className="w-4 h-4" />
             {rerunStatus}
           </div>
         )}
 
-        {/* Layout: sidebar + content */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Sidebar */}
-          <aside className="hidden lg:block w-[260px] flex-shrink-0 sticky top-20 z-20 self-start" style={{ position: "sticky" }}>
-            <div className="bg-[#0d1117]/80 border border-white/[0.06] rounded-2xl p-4 backdrop-blur-xl shadow-2xl shadow-black/40">
-              <div className="flex items-center gap-2 mb-4 px-1">
+        {/* ─── Body: sidebar + main ──────────────────────────────────────────
+            KEY FIX: use a normal flex row. The sidebar is `sticky top-4`
+            so it stays in view while the main column scrolls. No `fixed`
+            positioning at all — this keeps the sidebar perfectly aligned
+            below the header at all times.
+        ──────────────────────────────────────────────────────────────────── */}
+        <div className="flex gap-6 flex-1 min-h-0 items-start">
+
+          {/* ── Sidebar ─────────────────────────────────────────────────── */}
+          <aside className="hidden lg:flex flex-col w-[240px] flex-shrink-0 sticky top-4 self-start max-h-[calc(100vh-7rem)]">
+            <div className="bg-[#0d1117]/80 border border-white/[0.06] rounded-2xl p-4 backdrop-blur-xl shadow-2xl shadow-black/40 flex flex-col max-h-[calc(100vh-7rem)]">
+              <div className="flex items-center gap-2 mb-4 px-1 flex-shrink-0">
                 <GlobeAltIcon className="w-4 h-4 text-cyan-400" />
                 <span className="text-sm font-semibold text-gray-200">
                   Routes
@@ -272,13 +264,13 @@ export default function ProjectAnalysisPage() {
                   No routes discovered yet.
                 </div>
               ) : (
-                <nav className="max-h-[65vh] overflow-auto space-y-1 pr-1 sidebar-scroll">
-                  {routes.map((r, i) => {
-                    const active = r === activeRoute;
+                <nav className="flex-1 min-h-0 overflow-y-auto space-y-1 pr-1 sidebar-scroll">
+                  {routes.map((r) => {
+                    const active = r === selectedRoute;
                     return (
                       <button
                         key={r}
-                        onClick={() => scrollToRoute(r)}
+                        onClick={() => setSelectedRoute(r)}
                         className={[
                           "group w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-200 cursor-pointer relative",
                           active
@@ -292,10 +284,18 @@ export default function ProjectAnalysisPage() {
                         )}
                         <div className="flex items-center gap-2">
                           <CodeBracketIcon
-                            className={`w-3.5 h-3.5 flex-shrink-0 transition-colors ${active ? "text-cyan-400" : "text-gray-600 group-hover:text-gray-400"}`}
+                            className={`w-3.5 h-3.5 flex-shrink-0 transition-colors ${
+                              active
+                                ? "text-cyan-400"
+                                : "text-gray-600 group-hover:text-gray-400"
+                            }`}
                           />
                           <span
-                            className={`text-xs font-mono truncate transition-colors ${active ? "text-cyan-200" : "text-gray-400 group-hover:text-gray-200"}`}
+                            className={`text-xs font-mono truncate transition-colors ${
+                              active
+                                ? "text-cyan-200"
+                                : "text-gray-400 group-hover:text-gray-200"
+                            }`}
                           >
                             {routeLabel(r)}
                           </span>
@@ -308,7 +308,7 @@ export default function ProjectAnalysisPage() {
             </div>
           </aside>
 
-          {/* Main content */}
+          {/* ── Main content ──────────────────────────────────────────────── */}
           <div className="flex-1 min-w-0">
             {/* Loading */}
             {analysis.length === 0 && status === "pending" && (
@@ -326,14 +326,11 @@ export default function ProjectAnalysisPage() {
               </div>
             )}
 
-            {/* Route cards */}
-            {analysis.map((insight, idx) => (
+            {/* Selected route (only one at a time) */}
+            {selectedInsight && (
               <section
-                key={idx}
-                id={routeId(insight.route)}
-                data-route={insight.route}
+                key={selectedInsight.route}
                 className="mb-8 bg-[#0d1117]/60 rounded-2xl border border-white/[0.06] backdrop-blur-sm hover:border-white/[0.1] transition-all duration-300 animate-card-in"
-                style={{ animationDelay: `${idx * 80}ms` }}
               >
                 {/* Route header */}
                 <div className="p-5 border-b border-white/[0.06] flex items-center justify-between gap-4">
@@ -343,10 +340,10 @@ export default function ProjectAnalysisPage() {
                     </div>
                     <div className="min-w-0">
                       <h2 className="text-white font-semibold text-sm truncate">
-                        {routeLabel(insight.route)}
+                        {routeLabel(selectedInsight.route)}
                       </h2>
                       <p className="text-gray-500 text-xs font-mono truncate">
-                        {insight.route}
+                        {selectedInsight.route}
                       </p>
                     </div>
                   </div>
@@ -354,7 +351,7 @@ export default function ProjectAnalysisPage() {
                   <button
                     onClick={() => {
                       setAutoPrOpen(true);
-                      setAutoPrRoute(insight.route);
+                      setAutoPrRoute(selectedInsight.route);
                       setAutoPrMetric("LCP");
                       setAutoPrDryRun(true);
                       setAutoPrError("");
@@ -370,7 +367,7 @@ export default function ProjectAnalysisPage() {
 
                 {/* Metrics grid */}
                 <div className="p-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  {insight.performanceData.map((metrics) =>
+                  {selectedInsight.performanceData.map((metrics) =>
                     Object.entries(metrics).map(([name, detail]) => (
                       <div
                         key={name}
@@ -405,18 +402,18 @@ export default function ProjectAnalysisPage() {
 
                 {(() => {
                   const codeChangesList = flattenCodeChanges(
-                    insight.codeChanges
+                    selectedInsight.codeChanges
                   );
                   if (codeChangesList.length === 0) return null;
                   return <CodeChangesPanel changes={codeChangesList} />;
                 })()}
               </section>
-            ))}
+            )}
           </div>
         </div>
       </div>
 
-      {/* Auto PR Modal */}
+      {/* ─── Auto PR Modal ─────────────────────────────────────────────────── */}
       {autoPrOpen && (
         <div
           className="fixed inset-0 z-50 flex min-h-full items-center justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-6 animate-fade-in"
@@ -426,7 +423,7 @@ export default function ProjectAnalysisPage() {
             className="bg-[#0d1117] rounded-2xl w-full max-w-5xl border border-white/[0.08] shadow-2xl shadow-black/60 animate-modal-in flex flex-col max-h-[min(92vh,56rem)] my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal header — stays fixed while body scrolls */}
+            {/* Modal header */}
             <div className="flex justify-between items-start gap-4 p-6 pb-4 flex-shrink-0 border-b border-white/[0.06]">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 flex-shrink-0">
@@ -545,7 +542,7 @@ export default function ProjectAnalysisPage() {
                 </div>
               </div>
 
-              {/* GitHub PAT (required when not dry run) */}
+              {/* GitHub PAT */}
               <div
                 className={`rounded-xl border p-4 space-y-3 transition-colors ${
                   autoPrDryRun
@@ -570,7 +567,7 @@ export default function ProjectAnalysisPage() {
                     <p className="text-[11px] text-gray-500 leading-relaxed">
                       {autoPrDryRun
                         ? "Not needed for preview. Turn off Dry run to create a real PR on your repo."
-                        : "Use a classic personal access token from an account that can push to this repo (see Help). Or set GITHUB_TOKEN on the API server."}
+                        : "Use a classic personal access token from an account that can push to this repo. Or set GITHUB_TOKEN on the API server."}
                     </p>
                   </div>
                   <button
@@ -586,30 +583,20 @@ export default function ProjectAnalysisPage() {
                   <div className="text-[11px] text-gray-400 space-y-2 border-t border-white/10 pt-3">
                     <p className="leading-relaxed text-gray-300">
                       <strong className="text-white">Which account?</strong> The
-                      token must belong to a GitHub user who is allowed to create
-                      branches and open pull requests on the repository in your
-                      project&apos;s{" "}
+                      token must belong to a GitHub user who is allowed to
+                      create branches and open pull requests on the repository
+                      in your project&apos;s{" "}
                       <code className="text-cyan-200/90 bg-white/5 px-1 rounded">
                         gitUrl
-                      </code>{" "}
-                      (e.g.{" "}
-                      <code className="text-cyan-200/90 bg-white/5 px-1 rounded">
-                        github.com/you/your-repo
                       </code>
-                      ). Usually that&apos;s <strong>your own account</strong> if
-                      you own the repo, or a teammate/org bot with{" "}
-                      <strong>write</strong> access—not a random user.
-                    </p>
-                    <p className="leading-relaxed">
-                      ShiftAudit Auto PR is tested with a{" "}
-                      <strong className="text-gray-300">classic</strong> personal
-                      access token (not fine-grained). GitHub&apos;s API uses the
-                      token as &quot;who&quot; is pushing the branch and opening
-                      the PR.
+                      . Usually that&apos;s <strong>your own account</strong>{" "}
+                      if you own the repo.
                     </p>
                     <ul className="list-disc pl-4 space-y-1.5">
                       <li>
-                        <span className="text-gray-300">Recommended — classic PAT:</span>{" "}
+                        <span className="text-gray-300">
+                          Recommended — classic PAT:
+                        </span>{" "}
                         <a
                           href={LINK_GITHUB_CLASSIC_TOKENS}
                           target="_blank"
@@ -618,16 +605,11 @@ export default function ProjectAnalysisPage() {
                         >
                           github.com/settings/tokens
                         </a>{" "}
-                        → <strong className="text-gray-300">Generate new token (classic)</strong>{" "}
                         → enable the{" "}
                         <code className="text-gray-300 bg-white/5 px-1 rounded text-[10px]">
                           repo
                         </code>{" "}
-                        scope (private repos) or{" "}
-                        <code className="text-gray-300 bg-white/5 px-1 rounded text-[10px]">
-                          public_repo
-                        </code>{" "}
-                        for public-only.
+                        scope.
                       </li>
                       <li>
                         <span className="text-gray-300">Docs:</span>{" "}
@@ -641,7 +623,9 @@ export default function ProjectAnalysisPage() {
                         </a>
                       </li>
                       <li>
-                        <span className="text-gray-300">Optional — fine-grained:</span>{" "}
+                        <span className="text-gray-300">
+                          Optional — fine-grained:
+                        </span>{" "}
                         <a
                           href={LINK_GITHUB_FINE_GRAINED_NEW}
                           target="_blank"
@@ -650,17 +634,15 @@ export default function ProjectAnalysisPage() {
                         >
                           Create a fine-grained token
                         </a>{" "}
-                        with <strong className="text-gray-300">Contents</strong> and{" "}
+                        with <strong className="text-gray-300">Contents</strong>{" "}
+                        and{" "}
                         <strong className="text-gray-300">Pull requests</strong>{" "}
-                        (read/write) on that repo. May work, but classic is what we
-                        recommend here.
+                        read/write.
                       </li>
                     </ul>
                     <p className="text-amber-200/80 leading-relaxed">
-                      Treat tokens like passwords. Revoke them in GitHub settings
-                      if exposed. This demo can store the token in your browser
-                      only if you enable &quot;Remember&quot; below—avoid on
-                      shared computers.
+                      Treat tokens like passwords. Revoke them in GitHub
+                      settings if exposed.
                     </p>
                   </div>
                 )}
@@ -791,92 +773,40 @@ export default function ProjectAnalysisPage() {
           background: rgba(255, 255, 255, 0.15);
         }
         @keyframes float-slow {
-          0%,
-          100% {
-            transform: translate(0, 0) scale(1);
-          }
-          50% {
-            transform: translate(40px, -30px) scale(1.05);
-          }
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(40px, -30px) scale(1.05); }
         }
         @keyframes float-slower {
-          0%,
-          100% {
-            transform: translate(0, 0) scale(1);
-          }
-          50% {
-            transform: translate(-30px, 25px) scale(1.03);
-          }
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-30px, 25px) scale(1.03); }
         }
         @keyframes float-medium {
-          0%,
-          100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(25px, 35px);
-          }
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(25px, 35px); }
         }
         @keyframes float-reverse {
-          0%,
-          100% {
-            transform: translate(0, 0);
-          }
-          50% {
-            transform: translate(-20px, -25px);
-          }
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-20px, -25px); }
         }
-        .animate-float-slow {
-          animation: float-slow 14s ease-in-out infinite;
-        }
-        .animate-float-slower {
-          animation: float-slower 18s ease-in-out infinite;
-        }
-        .animate-float-medium {
-          animation: float-medium 12s ease-in-out infinite;
-        }
-        .animate-float-reverse {
-          animation: float-reverse 16s ease-in-out infinite;
-        }
+        .animate-float-slow { animation: float-slow 14s ease-in-out infinite; }
+        .animate-float-slower { animation: float-slower 18s ease-in-out infinite; }
+        .animate-float-medium { animation: float-medium 12s ease-in-out infinite; }
+        .animate-float-reverse { animation: float-reverse 16s ease-in-out infinite; }
         @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-          animation: fade-in 0.25s ease-out;
-        }
+        .animate-fade-in { animation: fade-in 0.25s ease-out; }
         @keyframes card-in {
-          from {
-            opacity: 0;
-            transform: translateY(16px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .animate-card-in {
-          animation: card-in 0.4s ease-out both;
-        }
+        .animate-card-in { animation: card-in 0.4s ease-out both; }
         @keyframes modal-in {
-          from {
-            opacity: 0;
-            transform: scale(0.97) translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
+          from { opacity: 0; transform: scale(0.97) translateY(8px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .animate-modal-in {
-          animation: modal-in 0.2s ease-out;
-        }
+        .animate-modal-in { animation: modal-in 0.2s ease-out; }
       `}</style>
     </div>
   );
