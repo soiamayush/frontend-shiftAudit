@@ -65,12 +65,12 @@ export default function HomePage() {
     <main className="relative min-h-screen overflow-hidden bg-[#0a0a0f] text-white">
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
-        <Image
+        {/* <Image
           src="/ai-hero-bg.jpg"
           alt=""
           fill
           className="object-cover opacity-30"
-        />
+        /> */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black" />
       </div>
 

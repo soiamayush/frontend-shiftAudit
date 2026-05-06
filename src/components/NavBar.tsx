@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/usAuth";
 import Button from "./Button";
 
 export default function Navbar() {
-  const { token, logout } = useAuth();
+  const router = useRouter();
+  const { token, user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/auth/login");
+  };
 
   return (
     <header className="fixed top-0 left-0 w-full z-50">
@@ -35,12 +42,20 @@ export default function Navbar() {
             {/* Right Side */}
             <div className="flex items-center gap-3">
               {token && (
-                <Button
-                  onClick={logout}
-                  className="px-5 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold hover:scale-[1.03] transition-all duration-200 shadow-[0_8px_20px_-6px_rgba(6,182,212,0.5)]"
-                >
-                  Logout
-                </Button>
+                <>
+                  {user?.name && (
+                    <span className="hidden text-sm text-gray-400 sm:inline max-w-[10rem] truncate">
+                      {user.name}
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={handleLogout}
+                    className="px-5 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold hover:scale-[1.03] transition-all duration-200 shadow-[0_8px_20px_-6px_rgba(6,182,212,0.5)]"
+                  >
+                    Log out
+                  </Button>
+                </>
               )}
             </div>
           </div>

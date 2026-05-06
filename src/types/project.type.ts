@@ -23,12 +23,8 @@ export interface AnalysisInsight {
   route: string;
   /** Array of performance metrics for that route */
   performanceData: PerformanceMetrics[];
-  codeChanges: {
-    FCP: CodeChange[];
-    LCP: CodeChange[];
-    CLS: CodeChange[];
-    TBT: CodeChange[];
-  };
+  /** Per-metric suggested edits from the analyzer (keys may be a subset of FCP/LCP/CLS/TBT). */
+  codeChanges?: Partial<Record<keyof PerformanceMetrics, CodeChange[]>>;
 }
 
 /**
@@ -76,4 +72,16 @@ export interface ProjectResponse {
 
 export type RerunResponse = {
   message: string;
+};
+
+export type AutoPrMetric = "LCP" | "FCP" | "CLS" | "TBT";
+
+export type AutoPullRequestResponse = {
+  ok: boolean;
+  dryRun: boolean;
+  title: string;
+  branch: string;
+  prUrl?: string | null;
+  diff: string;
+  changedFiles: string[];
 };

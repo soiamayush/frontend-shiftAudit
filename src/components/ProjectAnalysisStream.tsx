@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { API_ROUTES } from "@/config";
+import { humanizeRecommendedStep } from "@/lib/analysisDisplay";
 import { AnalysisInsight } from "@/types/project.type";
 
 interface Props {
@@ -105,7 +106,9 @@ export default function ProjectAnalysisStream({
                   </p>
                   <ul className="list-disc list-inside text-sm text-gray-500">
                     {(detail as MetricDetail).recommendedSteps.map(
-                      (step: string, j: number) => <li key={j}>{step}</li>
+                      (step: string, j: number) => (
+                        <li key={j}>{humanizeRecommendedStep(step)}</li>
+                      )
                     )}
                   </ul>
                 </div>

@@ -1,14 +1,20 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Input from "../../../components/Input";
 import Button from "../../../components/Button";
 import { useAuth } from "../../../hooks/usAuth";
 import { API_ROUTES } from "@/config";
 
+function safeNextPath(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
+  return raw;
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const { login, setSessionToken } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -22,26 +28,30 @@ export default function LoginPage() {
     setIsLoading(true);
     const result = await login(form);
     setIsLoading(false);
-    if (result.ok) return router.push("/dashboard");
+    if (result.ok)
+      return router.push(safeNextPath(searchParams.get("next")));
     setError(result.error || "Invalid credentials");
   };
 
-  const handleGoogleResponse = useCallback(async (response: { credential: string }) => {
-    try {
-      const res = await fetch(API_ROUTES.GOOGLE_AUTH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential: response.credential }),
-      });
-      if (!res.ok) throw new Error("Google login failed");
-      const { token } = await res.json();
-      localStorage.setItem("token", token);
-      router.push("/dashboard");
-    } catch (err) {
-      console.error(err);
-      setError("Google sign‑in failed");
-    }
-  }, [router]);
+  const handleGoogleResponse = useCallback(
+    async (response: { credential: string }) => {
+      try {
+        const res = await fetch(API_ROUTES.GOOGLE_AUTH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+        });
+        if (!res.ok) throw new Error("Google login failed");
+        const { token } = await res.json();
+        setSessionToken(token);
+        router.push(safeNextPath(searchParams.get("next")));
+      } catch (err) {
+        console.error(err);
+        setError("Google sign‑in failed");
+      }
+    },
+    [router, searchParams, setSessionToken]
+  );
 
   // Google Sign-In Integration
   useEffect(() => {
